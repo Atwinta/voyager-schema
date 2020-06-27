@@ -1,0 +1,21 @@
+{
+    "name": "atwinta/voyager-schema",
+    "description": "Voyager migrations",
+    "authors": [
+        {
+            "name": "Nikita",
+            "email": "evan.gelior@ya.ru"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Atwinta\\Voyager\\": "src"
+        }
+    },
+    "require": {
+        "php": "^7.2.5",
+        "ext-json": "*",
+        "laravel/framework": "^7.0",
+        "tcg/voyager": "^1.4"
+    }
+}
