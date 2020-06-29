@@ -178,7 +178,7 @@ class VoyagerService implements VoyagerInterface
 
         $allFields = array_merge($allFields, array_keys($rows));
 
-        DB::transaction(function () use ($allFields, $object, $model, $dataTypeId) {
+        DB::transaction(function () use ($rows, $allFields, $object, $model, $dataTypeId) {
             foreach ($allFields as $index => $field) {
                 $type = $field == $model->getKeyName() && $model->getKeyType() == "int"
                     ? FieldType::NUMBER
