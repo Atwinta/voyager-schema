@@ -134,13 +134,6 @@ class UserDataType extends BaseDataType
                 "edit" => false,
                 "add" => false
             ],
-            Model::CREATED_AT => [
-                "display_name" => "Дата создания",
-                "browse" => false,
-                "read" => true,
-                "edit" => false,
-                "add" => false
-            ],
         ];
     }
 }
