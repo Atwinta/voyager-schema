@@ -179,6 +179,7 @@ class VoyagerService implements VoyagerInterface
         $allFields = array_merge($allFields, array_keys($rows));
 
         DB::transaction(function () use ($rows, $allFields, $object, $model, $dataTypeId) {
+            DataRow::query()->where("data_type_id", $dataTypeId)->delete();
             foreach ($allFields as $index => $field) {
                 $type = $field == $model->getKeyName() && $model->getKeyType() == "int"
                     ? FieldType::NUMBER
