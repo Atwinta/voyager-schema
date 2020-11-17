@@ -41,7 +41,7 @@ class VoyagerService implements VoyagerInterface
         array $config
     )
     {
-        $this->defaultController = $config["default-controller"];
+        $this->defaultController = $config["default-controller"] ?? "";
         $this->menu = $config["menu"];
         $this->schema = $config["schemas"];
     }
