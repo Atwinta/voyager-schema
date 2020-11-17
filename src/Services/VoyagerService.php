@@ -58,37 +58,62 @@ class VoyagerService implements VoyagerInterface
      */
     public function menuGenerate()
     {
-        $menu = Menu::query()->where('name', 'admin')->first();
+        /** @var Menu $menu */
+        $menu = Menu::query()->with(["items"])->where('name', 'admin')->first();
         if ($menu) {
-            $this->recursiveInsert(
+            $ids = $menu->items->pluck("id");
+
+            $created = $this->recursiveInsert(
                 $this->menu,
                 $menu->id
             );
+
+            $ids = $ids->diff($created);
+            MenuItem::whereIn("id", $ids)->delete();
         }
     }
 
     // Menu
 
-    private function recursiveInsert(array $items, int $menuId, ?int $parentId = null, int &$order = 0)
+    private function recursiveInsert(array $items, int $menuId, ?int $parentId = null, int &$order = 0, int $parentIndex = 0)
     {
+        $ids = [];
         foreach ($items as $index => $item) {
+            $key = ($index + 1) + intval($parentIndex);
             $children = $item["children"] ?? [];
-            $item = $this->byModel($item["class"]);
-            $item["target"] = "_self";
+            $order++;
+            if (isset($item["custom"]) && $item["custom"]) {
+                if (isset($item["locale"])) {
+                    $item["title"] = __($item["locale"]);
+                }
+                unset($item["locale"], $item["custom"], $item["children"]);
+                $current = MenuItem::query()->updateOrCreate([
+                    "menu_id" => $menuId,
+                    "order" => $key
+                ], array_merge([
+                    "parent_id" => $parentId,
+                    "target" => "_self",
+                    "url" => ""
+                ], $item));
+            } else {
+                $item = $this->byModel($item["class"]);
+                $item["target"] = "_self";
+                unset($item["children"], $item["custom"]);
 
-            $order ++;
-            $current = MenuItem::query()->updateOrCreate([
-                "menu_id" => $menuId,
-                "route" => $item["route"],
-                "parent_id" => $parentId,
-            ], array_merge([
-                "url" => "",
-                "order" => $order
-            ], $item));
+                $current = MenuItem::query()->updateOrCreate([
+                    "menu_id" => $menuId,
+                    "order" => $key
+                ], array_merge([
+                    "url" => "",
+                    "order" => $order
+                ], $item));
+            }
+            $ids[] = $current->id;
             if (count($children)) {
-                $this->recursiveInsert($children, $menuId, $current->id, $order);
+                $ids = array_merge($ids, $this->recursiveInsert($children, $menuId, $current->id, $order, $index + 1));
             }
         }
+        return $ids;
     }
 
     private function byModel(string $class)

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Schema\Table;
+namespace App\Schema\Tables;
 
 use Atwinta\Voyager\Domain\Enum\FieldType;
 use Atwinta\Voyager\Schema\BaseDataType;
