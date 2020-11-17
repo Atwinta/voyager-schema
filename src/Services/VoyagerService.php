@@ -29,18 +29,21 @@ class VoyagerService implements VoyagerInterface
     /** @var array */
     protected $schema;
 
+    /** @var string|null */
+    protected $defaultController = null;
+
     /**
      * VoyagerService constructor.
      * @param array $schema
      * @param array $menu
      */
     public function __construct(
-        array $schema,
-        array $menu
+        array $config
     )
     {
-        $this->menu = $menu;
-        $this->schema = $schema;
+        $this->defaultController = $config["default-controller"];
+        $this->menu = $config["menu"];
+        $this->schema = $config["schemas"];
     }
 
     /**
@@ -157,6 +160,7 @@ class VoyagerService implements VoyagerInterface
             ], array_merge([
                     "slug" => $this->generateSlug($model),
                     "model_name" => $model,
+                    "controller" => $this->defaultController,
                     "server_side" => true,
                 ], $data)
             );

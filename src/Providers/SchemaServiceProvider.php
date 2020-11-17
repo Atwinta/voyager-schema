@@ -13,8 +13,7 @@ class SchemaServiceProvider extends ServiceProvider
     {
         $this->app->singleton(VoyagerInterface::class, function () {
             return new VoyagerService(
-                config("voyager-schema.schemas"),
-                config("voyager-schema.menu")
+                config("voyager-schema")
             );
         });
 
