@@ -107,6 +107,7 @@ class VoyagerService implements VoyagerInterface
                     "menu_id" => $menuId,
                     "order" => $key
                 ], array_merge([
+                    "parent_id" => $parentId,
                     "url" => "",
                     "order" => $order
                 ], $item));
