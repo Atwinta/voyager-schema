@@ -78,11 +78,10 @@ class VoyagerService implements VoyagerInterface
 
     // Menu
 
-    private function recursiveInsert(array $items, int $menuId, ?int $parentId = null, int &$order = 0, int $parentIndex = 0)
+    private function recursiveInsert(array $items, int $menuId, ?int $parentId = null, int &$order = 0)
     {
         $ids = [];
         foreach ($items as $index => $item) {
-            $key = ($index + 1) + intval($parentIndex);
             $children = $item["children"] ?? [];
             $order++;
             if (isset($item["custom"]) && $item["custom"]) {
@@ -92,7 +91,7 @@ class VoyagerService implements VoyagerInterface
                 unset($item["locale"], $item["custom"], $item["children"]);
                 $current = MenuItem::query()->updateOrCreate([
                     "menu_id" => $menuId,
-                    "order" => $key
+                    "order" => $order
                 ], array_merge([
                     "parent_id" => $parentId,
                     "target" => "_self",
@@ -105,16 +104,15 @@ class VoyagerService implements VoyagerInterface
 
                 $current = MenuItem::query()->updateOrCreate([
                     "menu_id" => $menuId,
-                    "order" => $key
+                    "order" => $order
                 ], array_merge([
                     "parent_id" => $parentId,
                     "url" => "",
-                    "order" => $order
                 ], $item));
             }
             $ids[] = $current->id;
             if (count($children)) {
-                $ids = array_merge($ids, $this->recursiveInsert($children, $menuId, $current->id, $order, $index + 1));
+                $ids = array_merge($ids, $this->recursiveInsert($children, $menuId, $current->id, $order));
             }
         }
         return $ids;
