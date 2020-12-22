@@ -32,6 +32,8 @@ class VoyagerService implements VoyagerInterface
     /** @var string|null */
     protected $defaultController = null;
 
+    protected $defaultPolicy = null;
+
     /**
      * VoyagerService constructor.
      * @param array $schema
@@ -42,6 +44,7 @@ class VoyagerService implements VoyagerInterface
     )
     {
         $this->defaultController = $config["default-controller"] ?? "";
+        $this->defaultPolicy = $config["default-policy"] ?? "";
         $this->menu = $config["menu"];
         $this->schema = $config["schemas"];
     }
@@ -160,6 +163,7 @@ class VoyagerService implements VoyagerInterface
                     "slug" => $this->generateSlug($model),
                     "model_name" => $model,
                     "controller" => $this->defaultController,
+                    "policy_name" => $this->defaultPolicy,
                     "server_side" => true,
                 ], $data)
             );
