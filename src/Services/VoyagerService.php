@@ -155,6 +155,9 @@ class VoyagerService implements VoyagerInterface
         return DB::transaction(function () use ($model, $object) {
             $data = $object->getDataTypeArray();
             $roles = $data["roles"] ?? "*";
+            if (!empty($data["custom_menu_icon"])) {
+                $data["icon"] = $data["custom_menu_icon"];
+            }
             unset($data["roles"], $data["custom_menu_title"], $data["custom_menu_icon"]);
 
             $dataType = DataType::query()->updateOrCreate([
