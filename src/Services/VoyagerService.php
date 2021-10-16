@@ -5,17 +5,23 @@ namespace Atwinta\Voyager\Services;
 
 use Atwinta\Voyager\Domain\Enum\FieldType;
 use Atwinta\Voyager\Schema\Abstracts\DataTypeInterface;
+use Atwinta\Voyager\Schema\Abstracts\SettingsGroupInterface;
 use Atwinta\Voyager\Services\Abstracts\VoyagerInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use RegexIterator;
 use TCG\Voyager\Models\DataRow;
 use TCG\Voyager\Models\DataType;
 use TCG\Voyager\Models\Menu;
 use TCG\Voyager\Models\MenuItem;
 use TCG\Voyager\Models\Permission;
 use TCG\Voyager\Models\Role;
+use Throwable;
 
 /**
  * Class VoyagerService
@@ -32,21 +38,37 @@ class VoyagerService implements VoyagerInterface
     /** @var string|null */
     protected $defaultController = null;
 
+    /** @var string|null */
     protected $defaultPolicy = null;
+
+    /** @var string|null */
+    protected $path = null;
+
+    /** @var array */
+    protected $originVoyagerSettings = [
+        // "site.title",
+        // "site.description",
+        // "site.logo",
+        // "site.google_analytics_tracking_id",
+        "admin.bg_image",
+        "admin.title",
+        "admin.description",
+        "admin.loader",
+        "admin.icon_image",
+        "admin.google_analytics_client_id",
+    ];
 
     /**
      * VoyagerService constructor.
-     * @param array $schema
-     * @param array $menu
+     * @param array $config
      */
-    public function __construct(
-        array $config
-    )
+    public function __construct(array $config)
     {
         $this->defaultController = $config["default-controller"] ?? "";
         $this->defaultPolicy = $config["default-policy"] ?? "";
         $this->menu = $config["menu"];
-        $this->schema = $config["schemas"];
+        $this->path = $config["path"] ?? app_path('Schema');
+        $this->schema = $config["schemas"] ?? $this->getClassesByPath($this->path . DIRECTORY_SEPARATOR . 'Tables');
     }
 
     /**
@@ -250,7 +272,7 @@ class VoyagerService implements VoyagerInterface
                 ], $row));
             }
 
-            });
+        });
 
     }
 
@@ -278,5 +300,120 @@ class VoyagerService implements VoyagerInterface
         }
 
         return implode("-", $items);
+    }
+
+
+    /**
+     * @param string $path
+     *
+     * @return array
+     * @see https://stackoverflow.com/questions/22761554
+     */
+    private function getClassesByPath(string $path): array
+    {
+        $arrayOfClasses = [];
+
+        $allFiles = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
+        $phpFiles = new RegexIterator($allFiles, '/\.php$/');
+        foreach ($phpFiles as $phpFile) {
+            $content = file_get_contents($phpFile->getRealPath());
+            $tokens = token_get_all($content);
+            $namespace = '';
+            for ($index = 0; isset($tokens[$index]); $index++) {
+                if (!isset($tokens[$index][0])) {
+                    continue;
+                }
+                if (T_NAMESPACE === $tokens[$index][0]) {
+                    $index += 2; // Skip namespace keyword and whitespace
+                    while (isset($tokens[$index]) && is_array($tokens[$index])) {
+                        $namespace .= $tokens[$index++][1];
+                    }
+                }
+                if (T_CLASS === $tokens[$index][0]
+                    && T_WHITESPACE === $tokens[$index + 1][0]
+                    && T_STRING === $tokens[$index + 2][0]
+                ) {
+                    $index += 2; // Skip class keyword and whitespace
+                    $arrayOfClasses[] = $namespace.'\\'.$tokens[$index][1];
+
+                    break; // break if you have one class per file (psr-4 compliant)
+                }
+            }
+        }
+
+        return $arrayOfClasses;
+    }
+
+
+    private function makeSettingsGroups(): array
+    {
+        $settingGroups = $settings = [];
+
+        try {
+            $settings = $this->getClassesByPath($this->path . DIRECTORY_SEPARATOR . 'SettingsGroups');
+        } catch (Throwable $th) {}
+
+        foreach ($settings as $setting) {
+            if (is_a($setting, SettingsGroupInterface::class, true)) {
+                $name = $setting::getSettingGroupName();
+                $fields = $setting::getSettingGroupFields();
+                $settingGroups[$name] = $fields;
+            }
+        }
+
+        return $settingGroups;
+    }
+
+
+    /**
+     * @param Collection $existSettings
+     *
+     * @return void
+     */
+    private function dropUnwantedSettings(Collection $existSettings): void
+    {
+        $existSettings = $existSettings->pluck('key')->toArray();
+        $newSettings = array_reduce($this->makeSettingsGroups(), function ($carry, $item) {
+            return array_merge($carry, array_column($item, 'key'));
+        }, []);
+        $unwantedSettings = array_diff($existSettings, $this->originVoyagerSettings, $newSettings);
+
+        DB::table('settings')->whereIn('key', $unwantedSettings, 'or')->delete();
+    }
+
+
+    /**
+     * @inheritdoc
+     */
+    public function settingsGenerate(): void
+    {
+        $settingGroups = $this->makeSettingsGroups();
+
+        DB::transaction(function () use ($settingGroups) {
+            $existSettings = DB::table('settings')->get(['key', 'value']);
+
+            foreach ($settingGroups as $settingGroup => $settings) {
+
+                $index = 0;
+
+                foreach ($settings as $setting) {
+                    $obj = $existSettings->where('key', $setting['key'])->first();
+
+                    if ($obj == null || empty($obj->value)) {
+                        DB::table('settings')->updateOrInsert(['key' => $setting['key']], array_merge($setting, [
+                            'order' => $index++,
+                            'group' => $settingGroup
+                        ]));
+                    } else {
+                        DB::table('settings')->where(['key' => $setting['key']])->update([
+                            'order' => $index++,
+                            'display_name' => $setting['display_name'],
+                        ]);
+                    }
+                }
+            }
+
+            $this->dropUnwantedSettings($existSettings);
+        });
     }
 }

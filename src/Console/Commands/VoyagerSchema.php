@@ -26,5 +26,7 @@ class VoyagerSchema extends Command
         $service->schemaGenerate();
         $this->info("Import menu");
         $service->menuGenerate();
+        $this->info("Import settings");
+        $service->settingsGenerate();
     }
 }

@@ -14,4 +14,9 @@ interface VoyagerInterface
      * @return mixed
      */
     public function menuGenerate();
+
+    /**
+     * @return void
+     */
+    public function settingsGenerate(): void;
 }

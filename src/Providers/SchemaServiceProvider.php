@@ -25,6 +25,7 @@ class SchemaServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->publishes([__DIR__ . "/../Schema/Tables" => app_path("Schema/Tables")]);
+        $this->publishes([__DIR__ . "/../Schema/SettingsGroups" => app_path("Schema/SettingsGroups")]);
         $this->publishes([__DIR__ . '/../../config' => config_path() . '/']);
     }
 }
