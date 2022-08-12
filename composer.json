@@ -13,9 +13,9 @@
         }
     },
     "require": {
-        "php": "^7.2.5",
+        "php": "^7.2.5|^8.1",
         "ext-json": "*",
-        "laravel/framework": "^7.0|^8.0",
-        "tcg/voyager": "^1.4"
+        "laravel/framework": "^7.0|^8.0|^9.0",
+        "tcg/voyager": "^1.4|^1.5|^1.6"
     }
 }
